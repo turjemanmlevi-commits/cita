@@ -1,0 +1,540 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Una pregunta para ti</title>
+<meta name="description" content="Tengo algo que preguntarte.">
+<meta property="og:title" content="Tengo algo que preguntarte">
+<meta property="og:description" content="Ábrelo cuando tengas un minuto.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,500;1,700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/regular/style.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.1/src/fill/style.css">
+<style>
+  /* Radius rule: interactive buttons are full-pill, cards are 22px, inputs are 14px. */
+  :root {
+    --bg: #fbf0f2;
+    --bg-2: #f6e1e6;
+    --ink: #2b1720;
+    --ink-soft: #6d4f5b;
+    --accent: #c52a55;
+    --accent-ink: #fff7f9;
+    --accent-soft: rgba(197, 42, 85, .1);
+    --card: rgba(255, 255, 255, .72);
+    --line: rgba(120, 40, 70, .14);
+    --shadow: 0 24px 60px -24px rgba(150, 30, 70, .35);
+    --heart: 197, 42, 85;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #170c11;
+      --bg-2: #22111a;
+      --ink: #f8e9ee;
+      --ink-soft: #c7a6b3;
+      --accent: #ff5c86;
+      --accent-ink: #26060f;
+      --accent-soft: rgba(255, 92, 134, .12);
+      --card: rgba(46, 22, 33, .7);
+      --line: rgba(255, 150, 180, .14);
+      --shadow: 0 24px 60px -24px rgba(0, 0, 0, .6);
+      --heart: 255, 92, 134;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    font-family: "Outfit", system-ui, sans-serif;
+    color: var(--ink);
+    background:
+      radial-gradient(1200px 700px at 85% -10%, var(--bg-2), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, var(--bg-2), transparent 60%),
+      var(--bg);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    -webkit-tap-highlight-color: transparent;
+  }
+  canvas#hearts { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+  canvas#burst { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 30; }
+
+  main { position: relative; z-index: 1; min-height: 100dvh; display: grid; place-items: center; padding: 32px 16px; }
+  .screen {
+    width: 100%; max-width: 760px;
+    display: none; flex-direction: column; align-items: center; text-align: center; gap: 28px;
+  }
+  .screen.active { display: flex; animation: enter .9s cubic-bezier(.16, 1, .3, 1) both; }
+  .screen.leaving { display: flex; animation: leave .45s cubic-bezier(.7, 0, .84, 0) both; }
+  @keyframes enter { from { opacity: 0; transform: translateY(26px) scale(.98); filter: blur(6px); } to { opacity: 1; transform: none; filter: none; } }
+  @keyframes leave { to { opacity: 0; transform: translateY(-18px) scale(.98); filter: blur(6px); } }
+
+  h1, h2 {
+    font-family: "Playfair Display", Georgia, serif; font-style: italic; font-weight: 500;
+    letter-spacing: -.02em; line-height: 1.1; padding-bottom: .08em;
+  }
+  h1 { font-size: clamp(2.6rem, 8vw, 5rem); }
+  h2 { font-size: clamp(2rem, 5.5vw, 3.2rem); }
+  h1 em, h2 em { font-weight: 700; color: var(--accent); }
+  .sub { color: var(--ink-soft); font-size: clamp(1rem, 2.4vw, 1.15rem); font-weight: 300; max-width: 42ch; line-height: 1.6; }
+
+  /* Hero heart */
+  .big-heart { font-size: 72px; color: var(--accent); line-height: 1; animation: beat 1.6s ease-in-out infinite; filter: drop-shadow(0 12px 24px rgba(var(--heart), .35)); }
+  @keyframes beat { 0%, 100% { transform: scale(1); } 14% { transform: scale(1.14); } 28% { transform: scale(1); } 42% { transform: scale(1.1); } 70% { transform: scale(1); } }
+
+  /* Buttons */
+  .actions { display: flex; gap: 16px; align-items: center; justify-content: center; flex-wrap: wrap; min-height: 80px; position: relative; }
+  .btn {
+    font: inherit; font-weight: 500; font-size: 1.05rem; border: 0; cursor: pointer; white-space: nowrap;
+    padding: 16px 34px; border-radius: 999px; display: inline-flex; align-items: center; gap: 10px;
+    transition: transform .35s cubic-bezier(.16, 1, .3, 1), box-shadow .35s, background .3s, opacity .3s;
+  }
+  .btn:active { transform: scale(.97); }
+  .btn-yes { background: var(--accent); color: var(--accent-ink); box-shadow: 0 14px 30px -12px rgba(var(--heart), .7); }
+  .btn-yes:hover { transform: translateY(-2px); box-shadow: 0 20px 40px -14px rgba(var(--heart), .8); }
+  .btn-no { background: transparent; color: var(--ink-soft); box-shadow: inset 0 0 0 1.5px var(--line); }
+  .btn-no.fleeing { position: fixed; z-index: 20; transition: left .35s cubic-bezier(.16, 1, .3, 1), top .35s cubic-bezier(.16, 1, .3, 1); }
+  .btn-ghost { background: transparent; color: var(--ink-soft); padding: 12px 20px; font-size: .95rem; }
+  .btn-ghost:hover { color: var(--accent); }
+  .btn[disabled] { opacity: .45; cursor: not-allowed; transform: none; box-shadow: none; }
+  .no-note { min-height: 1.4em; color: var(--ink-soft); font-size: .95rem; font-style: italic; }
+
+  /* City cards */
+  .cities { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; width: 100%; }
+  .city {
+    position: relative; overflow: hidden; border-radius: 22px; cursor: pointer; border: 0; font: inherit; color: #fff;
+    aspect-ratio: 4 / 5; display: flex; flex-direction: column; justify-content: flex-end; align-items: flex-start;
+    padding: 24px; text-align: left; box-shadow: var(--shadow);
+    transition: transform .5s cubic-bezier(.16, 1, .3, 1);
+  }
+  .city::before { content: ""; position: absolute; inset: 0; background-size: cover; background-position: center; transition: transform 1.2s cubic-bezier(.16, 1, .3, 1); }
+  .city::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, transparent 35%, rgba(30, 5, 15, .82)); }
+  .city > * { position: relative; z-index: 1; }
+  .city:hover { transform: translateY(-4px) rotate(-.4deg); }
+  .city:hover::before { transform: scale(1.06); }
+  .city.london::before { background-image: url("https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=900&q=70&auto=format&fit=crop"), linear-gradient(135deg, #3a2a4a, #7a3350); }
+  .city.madrid::before { background-image: url("https://images.unsplash.com/photo-1539037116277-4db20889f2d4?w=900&q=70&auto=format&fit=crop"), linear-gradient(135deg, #7a3326, #c7703a); }
+  .city strong { font-family: "Playfair Display", Georgia, serif; font-style: italic; font-weight: 700; font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.1; }
+  .city span { font-weight: 300; opacity: .9; font-size: .95rem; margin-top: 4px; }
+
+  /* Plans */
+  .plans { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; width: 100%; text-align: left; }
+  .plan {
+    font: inherit; color: var(--ink); cursor: pointer; border: 0; text-align: left;
+    background: var(--card); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-radius: 22px; padding: 16px 18px; display: grid; grid-template-columns: 44px 1fr; gap: 14px; align-items: center;
+    box-shadow: inset 0 0 0 1px var(--line);
+    opacity: 0; animation: rise .7s cubic-bezier(.16, 1, .3, 1) forwards; animation-delay: calc(var(--i) * 55ms);
+    transition: box-shadow .3s, transform .3s cubic-bezier(.16, 1, .3, 1), background .3s;
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+  .plan:hover { transform: translateY(-2px); box-shadow: inset 0 0 0 1px rgba(var(--heart), .45); }
+  .plan .ico { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-size: 22px; transition: background .3s, color .3s; }
+  .plan b { display: block; font-weight: 500; font-size: 1rem; }
+  .plan small { display: block; color: var(--ink-soft); font-weight: 300; font-size: .88rem; line-height: 1.4; margin-top: 2px; }
+  .plan[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--accent), 0 14px 30px -18px rgba(var(--heart), .8); }
+  .plan[aria-pressed="true"] .ico { background: var(--accent); color: var(--accent-ink); }
+
+  /* Form */
+  .form { width: 100%; max-width: 460px; display: grid; gap: 20px; text-align: left; }
+  .field { display: grid; gap: 8px; }
+  .field label { font-weight: 500; font-size: .95rem; }
+  .field .help { color: var(--ink-soft); font-size: .85rem; font-weight: 300; }
+  input, textarea {
+    font: inherit; color: var(--ink); background: var(--card); border: 0; border-radius: 14px;
+    padding: 14px 16px; box-shadow: inset 0 0 0 1.5px var(--line); width: 100%; color-scheme: light dark;
+    transition: box-shadow .25s;
+  }
+  input:focus, textarea:focus { outline: none; box-shadow: inset 0 0 0 2px var(--accent); }
+  textarea { resize: vertical; min-height: 96px; }
+  ::placeholder { color: var(--ink-soft); opacity: .8; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    font: inherit; font-size: .92rem; cursor: pointer; border: 0; border-radius: 999px; padding: 10px 16px;
+    background: var(--card); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--line); transition: all .25s;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); box-shadow: none; }
+  .error { color: var(--accent); font-size: .88rem; min-height: 1.2em; }
+
+  /* Summary ticket */
+  .ticket {
+    width: 100%; max-width: 460px; background: var(--card); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    border-radius: 22px; box-shadow: inset 0 0 0 1px var(--line), var(--shadow); padding: 8px 24px; text-align: left;
+  }
+  .ticket .row { display: grid; grid-template-columns: 28px 1fr; gap: 12px; padding: 16px 0; align-items: start; }
+  .ticket .row + .row { border-top: 1px dashed var(--line); }
+  .ticket i { color: var(--accent); font-size: 20px; margin-top: 2px; }
+  .ticket small { display: block; color: var(--ink-soft); font-size: .82rem; }
+  .ticket b { font-weight: 500; }
+
+  .spinner-heart { display: inline-block; animation: beat 1s ease-in-out infinite; }
+  .step-nav { display: flex; justify-content: space-between; align-items: center; width: 100%; gap: 12px; }
+
+  @media (max-width: 640px) {
+    .plans { grid-template-columns: 1fr; }
+    .cities { grid-template-columns: 1fr; }
+    .city { aspect-ratio: 16 / 10; }
+    .step-nav { flex-direction: column-reverse; }
+    .step-nav .btn-yes { width: 100%; justify-content: center; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+    .plan { opacity: 1; }
+  }
+</style>
+</head>
+<body>
+<canvas id="hearts" aria-hidden="true"></canvas>
+<canvas id="burst" aria-hidden="true"></canvas>
+
+<main>
+  <!-- 1. The question -->
+  <section class="screen active" id="s-ask" aria-labelledby="ask-title">
+    <div class="big-heart"><i class="ph-fill ph-heart"></i></div>
+    <h1 id="ask-title">¿Quieres salir a una <em>cita</em> conmigo?</h1>
+    <p class="sub">Llevo días pensando cómo preguntártelo. Al final he decidido hacerlo así.</p>
+    <div class="actions">
+      <button class="btn btn-yes" id="yes"><i class="ph-fill ph-heart"></i> Sí, quiero</button>
+      <button class="btn btn-no" id="no">No</button>
+    </div>
+    <p class="no-note" id="no-note" aria-live="polite"></p>
+  </section>
+
+  <!-- 2. City -->
+  <section class="screen" id="s-city" aria-labelledby="city-title">
+    <h2 id="city-title">Sabía que dirías que <em>sí</em>.<br>Ahora, ¿dónde?</h2>
+    <div class="cities">
+      <button class="city london" data-city="Londres"><strong>Londres</strong><span>Luces, Támesis y té a media tarde</span></button>
+      <button class="city madrid" data-city="Madrid"><strong>Madrid</strong><span>Atardeceres, terrazas y paseos sin prisa</span></button>
+    </div>
+  </section>
+
+  <!-- 3. Plan -->
+  <section class="screen" id="s-plan" aria-labelledby="plan-title">
+    <h2 id="plan-title">Elige el <em>plan</em></h2>
+    <p class="sub" id="plan-sub">Diez ideas. Tú decides, yo me encargo del resto.</p>
+    <div class="plans" id="plans" role="group" aria-label="Planes"></div>
+    <div class="step-nav">
+      <button class="btn btn-ghost" data-back="s-city"><i class="ph ph-arrow-left"></i> Cambiar ciudad</button>
+      <button class="btn btn-yes" id="plan-next" disabled>Siguiente <i class="ph ph-arrow-right"></i></button>
+    </div>
+  </section>
+
+  <!-- 4. Date -->
+  <section class="screen" id="s-date" aria-labelledby="date-title">
+    <h2 id="date-title">¿Cuándo te <em>viene</em> bien?</h2>
+    <form class="form" id="date-form" novalidate>
+      <div class="field">
+        <label for="date">Día</label>
+        <input type="date" id="date" required>
+        <span class="help">Cualquier día a partir de hoy.</span>
+      </div>
+      <div class="field">
+        <label id="time-label">Hora</label>
+        <div class="chips" role="group" aria-labelledby="time-label" id="time-chips">
+          <button type="button" class="chip" data-time="Por la mañana">Mañana</button>
+          <button type="button" class="chip" data-time="A mediodía">Mediodía</button>
+          <button type="button" class="chip" data-time="Por la tarde">Tarde</button>
+          <button type="button" class="chip" data-time="Por la noche">Noche</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="note">¿Algo que quieras decirme?</label>
+        <textarea id="note" maxlength="500" placeholder="Opcional. Lo leeré con una sonrisa."></textarea>
+      </div>
+      <p class="error" id="date-error" aria-live="polite"></p>
+      <div class="step-nav">
+        <button type="button" class="btn btn-ghost" data-back="s-plan"><i class="ph ph-arrow-left"></i> Cambiar plan</button>
+        <button type="submit" class="btn btn-yes">Ver la cita <i class="ph ph-arrow-right"></i></button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 5. Summary -->
+  <section class="screen" id="s-summary" aria-labelledby="sum-title">
+    <h2 id="sum-title">Nuestra <em>cita</em></h2>
+    <div class="ticket" id="ticket"></div>
+    <p class="error" id="send-error" aria-live="polite"></p>
+    <div class="step-nav" style="max-width:460px">
+      <button class="btn btn-ghost" data-back="s-date"><i class="ph ph-arrow-left"></i> Cambiar algo</button>
+      <button class="btn btn-yes" id="confirm"><i class="ph-fill ph-heart"></i> Confirmar</button>
+    </div>
+  </section>
+
+  <!-- 6. Done -->
+  <section class="screen" id="s-done" aria-labelledby="done-title">
+    <div class="big-heart"><i class="ph-fill ph-heart"></i></div>
+    <h1 id="done-title">Es una <em>cita</em>.</h1>
+    <p class="sub" id="done-sub">Ya me ha llegado tu respuesta. Cuento los días.</p>
+  </section>
+</main>
+
+<script>
+/* ============ CONFIG ============ */
+// Where the answer is emailed (via formsubmit.co). The first submission sends an
+// activation email to this address; once confirmed, every answer arrives there.
+const EMAIL_TO = "leviturjeman@gmail.com";
+
+const PLANS = {
+  Londres: [
+    { i: "ph-sun-horizon", t: "Atardecer en South Bank", d: "Paseo junto al Támesis mientras se encienden las luces." },
+    { i: "ph-ferris-wheel", t: "London Eye de noche", d: "La ciudad entera a nuestros pies." },
+    { i: "ph-fork-knife", t: "Cena en Covent Garden", d: "Un sitio bonito, velas y conversación sin prisa." },
+    { i: "ph-basket", t: "Picnic en Hyde Park", d: "Manta, fresas y lo que te apetezca." },
+    { i: "ph-coffee", t: "Brunch en Notting Hill", d: "Casitas de colores y el mejor café de la zona." },
+    { i: "ph-storefront", t: "Borough Market", d: "Probar un poco de todo, de puesto en puesto." },
+    { i: "ph-mask-happy", t: "Musical en el West End", d: "Una noche de teatro, como en las películas." },
+    { i: "ph-plant", t: "Sky Garden", d: "Un jardín en las alturas con vistas a todo Londres." },
+    { i: "ph-boat", t: "Barco por el Támesis", d: "Ver la ciudad desde el agua." },
+    { i: "ph-paint-brush", t: "Tate Modern y té", d: "Arte por la tarde y después un té con scones." },
+  ],
+  Madrid: [
+    { i: "ph-sun-horizon", t: "Atardecer en el Templo de Debod", d: "El mejor atardecer de Madrid, juntos." },
+    { i: "ph-boat", t: "Barca en el Retiro", d: "Yo remo, tú disfrutas del paseo." },
+    { i: "ph-fork-knife", t: "Cena en La Latina", d: "Un sitio acogedor y una sobremesa larga." },
+    { i: "ph-buildings", t: "Azotea en Gran Vía", d: "Algo rico arriba del todo, con Madrid iluminado." },
+    { i: "ph-coffee", t: "Churros en San Ginés", d: "Chocolate caliente, como manda la tradición." },
+    { i: "ph-wine", t: "Vermut por Malasaña", d: "Terrazas, calles con encanto y risas." },
+    { i: "ph-paint-brush", t: "Tarde en el Prado", d: "Perdernos entre cuadros y elegir el favorito." },
+    { i: "ph-mask-happy", t: "Musical en Gran Vía", d: "Una noche especial de teatro." },
+    { i: "ph-bicycle", t: "Bici por Madrid Río", d: "Paseo tranquilo junto al Manzanares." },
+    { i: "ph-storefront", t: "Mercado de San Miguel", d: "Picoteo de todo un poco, y después un paseo." },
+  ],
+};
+
+const NO_LINES = [
+  "¿Seguro?", "Piénsalo otra vez", "Ese botón no funciona muy bien", "Venga, dale una oportunidad",
+  "Creo que querías pulsar el otro", "Te prometo que merece la pena", "El botón de al lado es más bonito",
+];
+
+/* ============ STATE ============ */
+const state = { city: null, plan: null, date: null, time: null, note: "", noCount: 0 };
+const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s) => document.querySelector(s);
+
+/* ============ SCREENS ============ */
+function go(id) {
+  const cur = document.querySelector(".screen.active");
+  const next = document.getElementById(id);
+  if (!cur || reduce) { cur && cur.classList.remove("active"); next.classList.add("active"); return; }
+  cur.classList.remove("active"); cur.classList.add("leaving");
+  setTimeout(() => {
+    cur.classList.remove("leaving");
+    next.classList.add("active");
+    window.scrollTo({ top: 0 });
+  }, 420);
+}
+document.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", () => go(b.dataset.back)));
+
+/* ============ 1. YES / NO ============ */
+const noBtn = $("#no"), yesBtn = $("#yes");
+function flee(e) {
+  if (e) e.preventDefault();
+  state.noCount++;
+  $("#no-note").textContent = NO_LINES[(state.noCount - 1) % NO_LINES.length];
+  yesBtn.style.transform = `scale(${Math.min(1 + state.noCount * 0.12, 1.9)})`;
+  const r = noBtn.getBoundingClientRect();
+  noBtn.classList.add("fleeing");
+  const pad = 16, w = r.width, h = r.height;
+  const yr = yesBtn.getBoundingClientRect();
+  let x, y, tries = 0;
+  do {
+    x = pad + Math.random() * (innerWidth - w - pad * 2);
+    y = pad + Math.random() * (innerHeight - h - pad * 2);
+    tries++;
+  } while (tries < 20 && x < yr.right + 20 && x + w > yr.left - 20 && y < yr.bottom + 20 && y + h > yr.top - 20);
+  if (!noBtn.style.left) { noBtn.style.left = r.left + "px"; noBtn.style.top = r.top + "px"; noBtn.offsetWidth; }
+  noBtn.style.left = x + "px"; noBtn.style.top = y + "px";
+  if (state.noCount >= 6) noBtn.style.opacity = Math.max(0.15, 1 - (state.noCount - 5) * 0.2);
+}
+noBtn.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") flee(); });
+noBtn.addEventListener("click", flee);
+noBtn.addEventListener("touchstart", flee, { passive: false });
+
+yesBtn.addEventListener("click", () => {
+  const r = yesBtn.getBoundingClientRect();
+  burst(r.left + r.width / 2, r.top + r.height / 2, 90);
+  noBtn.remove();
+  setTimeout(() => go("s-city"), reduce ? 0 : 500);
+});
+
+/* ============ 2. CITY ============ */
+document.querySelectorAll(".city").forEach((c) => c.addEventListener("click", (e) => {
+  state.city = c.dataset.city; state.plan = null;
+  burst(e.clientX, e.clientY, 30);
+  renderPlans();
+  go("s-plan");
+}));
+
+/* ============ 3. PLANS ============ */
+function renderPlans() {
+  $("#plan-title").innerHTML = `Elige el <em>plan</em> en ${state.city}`;
+  const wrap = $("#plans"); wrap.innerHTML = "";
+  PLANS[state.city].forEach((p, idx) => {
+    const b = document.createElement("button");
+    b.className = "plan"; b.style.setProperty("--i", idx); b.setAttribute("aria-pressed", "false");
+    b.innerHTML = `<span class="ico"><i class="ph ${p.i}"></i></span><span><b>${p.t}</b><small>${p.d}</small></span>`;
+    b.addEventListener("click", (e) => {
+      wrap.querySelectorAll(".plan").forEach((x) => x.setAttribute("aria-pressed", "false"));
+      b.setAttribute("aria-pressed", "true");
+      state.plan = p.t;
+      $("#plan-next").disabled = false;
+      burst(e.clientX, e.clientY, 14);
+    });
+    wrap.appendChild(b);
+  });
+  $("#plan-next").disabled = true;
+}
+$("#plan-next").addEventListener("click", () => go("s-date"));
+
+/* ============ 4. DATE ============ */
+const dateInput = $("#date");
+const today = new Date(); today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
+dateInput.min = today.toISOString().slice(0, 10);
+document.querySelectorAll(".chip").forEach((c) => c.addEventListener("click", () => {
+  document.querySelectorAll(".chip").forEach((x) => x.setAttribute("aria-pressed", "false"));
+  c.setAttribute("aria-pressed", "true"); state.time = c.dataset.time;
+}));
+$("#date-form").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const err = $("#date-error");
+  if (!dateInput.value) { err.textContent = "Elige un día para la cita."; dateInput.focus(); return; }
+  if (dateInput.value < dateInput.min) { err.textContent = "Ese día ya ha pasado. Elige uno a partir de hoy."; return; }
+  if (!state.time) { err.textContent = "Elige también un momento del día."; return; }
+  err.textContent = "";
+  state.date = dateInput.value; state.note = $("#note").value.trim();
+  renderTicket(); go("s-summary");
+});
+
+/* ============ 5. SUMMARY & SEND ============ */
+function prettyDate(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const s = new Date(y, m - 1, d).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function esc(s) { return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+function renderTicket() {
+  $("#ticket").innerHTML = `
+    <div class="row"><i class="ph ph-map-pin"></i><div><small>Ciudad</small><b>${state.city}</b></div></div>
+    <div class="row"><i class="ph ph-heart"></i><div><small>Plan</small><b>${state.plan}</b></div></div>
+    <div class="row"><i class="ph ph-calendar-heart"></i><div><small>Cuándo</small><b>${prettyDate(state.date)}, ${state.time.toLowerCase()}</b></div></div>
+    ${state.note ? `<div class="row"><i class="ph ph-chat-circle-text"></i><div><small>Tu mensaje</small><b>${esc(state.note)}</b></div></div>` : ""}`;
+}
+const confirmBtn = $("#confirm");
+confirmBtn.addEventListener("click", async () => {
+  const err = $("#send-error"); err.textContent = "";
+  confirmBtn.disabled = true;
+  confirmBtn.innerHTML = `<span class="spinner-heart"><i class="ph-fill ph-heart"></i></span> Enviando`;
+  const payload = {
+    _subject: `Ha dicho que sí: ${state.plan} (${state.city})`,
+    _template: "table",
+    _captcha: "false",
+    Respuesta: "Sí",
+    Ciudad: state.city,
+    Plan: state.plan,
+    Día: prettyDate(state.date),
+    Momento: state.time,
+    Mensaje: state.note || "(sin mensaje)",
+    "Veces que intentó pulsar No": String(state.noCount),
+  };
+  try {
+    const res = await fetch(`https://formsubmit.co/ajax/${EMAIL_TO}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) throw new Error(res.status);
+    finish(true);
+  } catch (e) {
+    confirmBtn.disabled = false;
+    confirmBtn.innerHTML = `<i class="ph-fill ph-heart"></i> Reintentar`;
+    err.textContent = "No se ha podido enviar. Revisa la conexión y vuelve a intentarlo, o hazle una captura a esta tarjeta y mándamela.";
+  }
+});
+function finish() {
+  go("s-done");
+  setTimeout(() => {
+    burst(innerWidth / 2, innerHeight / 2, 160);
+    setTimeout(() => burst(innerWidth * 0.25, innerHeight * 0.4, 60), 400);
+    setTimeout(() => burst(innerWidth * 0.75, innerHeight * 0.4, 60), 700);
+  }, reduce ? 0 : 450);
+}
+
+/* ============ HEARTS: ambient float ============ */
+const bg = $("#hearts"), bctx = bg.getContext("2d");
+const fx = $("#burst"), fctx = fx.getContext("2d");
+let W, H, DPR;
+function resize() {
+  DPR = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+  [bg, fx].forEach((c) => { c.width = W * DPR; c.height = H * DPR; });
+  bctx.setTransform(DPR, 0, 0, DPR, 0, 0); fctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+resize(); addEventListener("resize", resize);
+const heartRGB = () => getComputedStyle(document.documentElement).getPropertyValue("--heart").trim();
+
+function heartPath(ctx, x, y, s) {
+  ctx.beginPath();
+  ctx.moveTo(x, y + s * 0.3);
+  ctx.bezierCurveTo(x, y, x - s * 0.5, y, x - s * 0.5, y + s * 0.3);
+  ctx.bezierCurveTo(x - s * 0.5, y + s * 0.6, x, y + s * 0.8, x, y + s);
+  ctx.bezierCurveTo(x, y + s * 0.8, x + s * 0.5, y + s * 0.6, x + s * 0.5, y + s * 0.3);
+  ctx.bezierCurveTo(x + s * 0.5, y, x, y, x, y + s * 0.3);
+  ctx.closePath();
+}
+
+const floaters = [];
+const COUNT = Math.round(Math.min(34, (innerWidth * innerHeight) / 32000));
+function spawnFloater(initial) {
+  return {
+    x: Math.random() * W, y: initial ? Math.random() * H : H + 40,
+    s: 8 + Math.random() * 22, v: 0.25 + Math.random() * 0.6,
+    sway: Math.random() * Math.PI * 2, swaySpeed: 0.004 + Math.random() * 0.01,
+    a: 0.08 + Math.random() * 0.22, rot: (Math.random() - 0.5) * 0.5,
+  };
+}
+for (let i = 0; i < COUNT; i++) floaters.push(spawnFloater(true));
+
+/* ============ HEARTS: burst particles ============ */
+const parts = [];
+function burst(x, y, n) {
+  if (reduce) return;
+  for (let i = 0; i < n; i++) {
+    const ang = Math.random() * Math.PI * 2, sp = 2 + Math.random() * 7;
+    parts.push({ x, y, vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp - 3, s: 8 + Math.random() * 16, life: 1, rot: Math.random() * 6, vr: (Math.random() - 0.5) * 0.2, hue: Math.random() });
+  }
+}
+
+function tick() {
+  const rgb = heartRGB();
+  bctx.clearRect(0, 0, W, H);
+  for (let i = 0; i < floaters.length; i++) {
+    const f = floaters[i];
+    f.y -= f.v; f.sway += f.swaySpeed;
+    const x = f.x + Math.sin(f.sway) * 18;
+    bctx.save(); bctx.translate(x, f.y); bctx.rotate(f.rot + Math.sin(f.sway) * 0.15);
+    bctx.fillStyle = `rgba(${rgb}, ${f.a})`; heartPath(bctx, 0, -f.s / 2, f.s); bctx.fill(); bctx.restore();
+    if (f.y < -40) floaters[i] = spawnFloater(false);
+  }
+  fctx.clearRect(0, 0, W, H);
+  for (let i = parts.length - 1; i >= 0; i--) {
+    const p = parts[i];
+    p.vy += 0.16; p.vx *= 0.985; p.x += p.vx; p.y += p.vy; p.rot += p.vr; p.life -= 0.012;
+    if (p.life <= 0 || p.y > H + 50) { parts.splice(i, 1); continue; }
+    fctx.save(); fctx.translate(p.x, p.y); fctx.rotate(p.rot);
+    fctx.fillStyle = p.hue > 0.7 ? `rgba(255, 190, 205, ${p.life})` : `rgba(${rgb}, ${p.life})`;
+    heartPath(fctx, 0, -p.s / 2, p.s); fctx.fill(); fctx.restore();
+  }
+  requestAnimationFrame(tick);
+}
+if (reduce) {
+  const rgb = heartRGB();
+  floaters.forEach((f) => { bctx.fillStyle = `rgba(${rgb}, ${f.a})`; heartPath(bctx, f.x, f.y, f.s); bctx.fill(); });
+} else {
+  requestAnimationFrame(tick);
+}
+
+/* Tap anywhere for a tiny sprinkle of hearts */
+addEventListener("pointerdown", (e) => { if (!e.target.closest("button, input, textarea")) burst(e.clientX, e.clientY, 8); });
+</script>
+</body>
+</html>
