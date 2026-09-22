@@ -425,17 +425,22 @@ confirmBtn.addEventListener("click", async () => {
   const err = $("#send-error"); err.textContent = "";
   confirmBtn.disabled = true;
   confirmBtn.innerHTML = `<span class="spinner-heart"><i class="ph-fill ph-heart"></i></span> Enviando`;
+  const planInfo = PLANS[state.city].find((p) => p.t === state.plan);
   const payload = {
-    _subject: `Ha dicho que sí: ${state.plan} (${state.city})`,
+    _subject: `💘 Ha dicho que SÍ: ${state.plan} en ${state.city}, ${prettyDate(state.date)}`,
     _template: "table",
     _captcha: "false",
-    Respuesta: "Sí",
+    Resumen: `Cita en ${state.city}: ${state.plan}. ${prettyDate(state.date)}, ${state.time.toLowerCase()}.`,
+    Respuesta: "Sí, quiere salir contigo",
     Ciudad: state.city,
     Plan: state.plan,
+    "Descripción del plan": planInfo ? planInfo.d : "",
     Día: prettyDate(state.date),
+    "Fecha (AAAA-MM-DD)": state.date,
     Momento: state.time,
-    Mensaje: state.note || "(sin mensaje)",
+    "Su mensaje para ti": state.note || "(no ha escrito mensaje)",
     "Veces que intentó pulsar No": String(state.noCount),
+    "Enviado el": new Date().toLocaleString("es-ES"),
   };
   try {
     const res = await fetch(`https://formsubmit.co/ajax/${EMAIL_TO}`, {
