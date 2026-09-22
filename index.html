@@ -449,6 +449,8 @@ confirmBtn.addEventListener("click", async () => {
       body: JSON.stringify(payload),
     });
     if (!res.ok) throw new Error(res.status);
+    const data = await res.json();
+    if (String(data.success) !== "true") throw new Error(data.message || "not sent");
     finish(true);
   } catch (e) {
     confirmBtn.disabled = false;
